@@ -1,17 +1,26 @@
 ---
 import "../styles/global.css";
+
+const { title = "Astro, Plot et Leaflet" } = Astro.props;
 ---
 
 <!doctype html>
-<html lang="en">
+<html lang="fr">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="generator" content={Astro.generator} />
-    <title>Astro Basics</title>
+    <title>{title}</title>
   </head>
   <body>
+    <nav aria-label="Navigation principale" class="p-4">
+      <ul class="flex gap-4">
+        <li><a href="/">Graphique Plot</a></li>
+        <li><a href="/carte">Carte Leaflet</a></li>
+        <li><a href="/population">Population</a></li>
+      </ul>
+    </nav>
     <slot />
   </body>
 </html>

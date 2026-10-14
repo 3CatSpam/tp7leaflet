@@ -1,0 +1,178 @@
+---
+import Layout from "../../layouts/Layout.astro";
+import populationMain from "../../assets/populationMAIN.json";
+
+const listeAnnee = [...new Set(populationMain.map((d) => d.Période))].sort(
+  (a, b) => b - a,
+);
+---
+
+<Layout title="Population par département (Observable Plot)">
+  <main class="p-4 flex flex-col gap-4">
+    <h1 class="text-2xl">Population par département</h1>
+
+    <div role="group" aria-label="Filtres de la carte" class="flex flex-wrap gap-4">
+      <div class="flex flex-col">
+        <label for="annee">Année</label>
+        <select id="annee">
+          {listeAnnee.map((annee, i) => <option selected={i === 0}>{annee}</option>)}
+        </select>
+      </div>
+      <div class="flex flex-col">
+        <label for="sexe">Sexe</label>
+        <select id="sexe"></select>
+      </div>
+      <div class="flex flex-col">
+        <label for="age">Âge</label>
+        <select id="age"></select>
+      </div>
+    </div>
+
+    <p id="statut-carte" aria-live="polite"></p>
+
+    <div id="carte-population" class="w-full">
+      <noscript>La carte nécessite JavaScript pour s'afficher.</noscript>
+    </div>
+
+    <details>
+      <summary>Voir les données de la carte</summary>
+      <table>
+        <caption>Population par département pour la sélection affichée</caption>
+        <thead>
+          <tr>
+            <th scope="col">Département</th>
+            <th scope="col">Population</th>
+          </tr>
+        </thead>
+        <tbody id="donnees-population"></tbody>
+      </table>
+    </details>
+  </main>
+</Layout>
+
+<script>
+  import * as Plot from "@observablehq/plot";
+  import departements from "../../assets/departements.geojson.json";
+  import populationMain from "../../assets/populationMAIN.json";
+
+  interface Ligne {
+    Géographie: string;
+    Sexe: string;
+    Âge: string;
+    Période: number;
+    Valeur: number;
+  }
+
+  const lignes: Ligne[] = populationMain;
+
+  const elmAnnee = document.getElementById("annee") as HTMLSelectElement;
+  const elmSexe = document.getElementById("sexe") as HTMLSelectElement;
+  const elmAge = document.getElementById("age") as HTMLSelectElement;
+  const elmCarte = document.getElementById("carte-population") as HTMLDivElement;
+  const elmStatut = document.getElementById("statut-carte") as HTMLParagraphElement;
+  const elmDonnees = document.getElementById("donnees-population") as HTMLTableSectionElement;
+
+  const valeursUniques = (valeurs: string[]) => [...new Set(valeurs)].sort();
+
+  const remplir = (select: HTMLSelectElement, options: string[], preferee: string) => {
+    select.replaceChildren(...options.map((o) => new Option(o.trim(), o)));
+    select.value = options.includes(preferee) ? preferee : options[0];
+  };
+
+  const majSexe = () => {
+    const annee = Number(elmAnnee.value);
+    remplir(
+      elmSexe,
+      valeursUniques(lignes.filter((l) => l.Période === annee).map((l) => l.Sexe)),
+      "Total",
+    );
+  };
+
+  const majAge = () => {
+    const annee = Number(elmAnnee.value);
+    const sexe = elmSexe.value;
+    remplir(
+      elmAge,
+      valeursUniques(
+        lignes.filter((l) => l.Période === annee && l.Sexe === sexe).map((l) => l.Âge),
+      ),
+      "Total",
+    );
+  };
+
+  const majCarte = () => {
+    const annee = Number(elmAnnee.value);
+    const sexe = elmSexe.value;
+    const age = elmAge.value.trim();
+
+    const valeurs = new Map(
+      lignes
+        .filter((l) => l.Période === annee && l.Sexe === sexe && l.Âge === elmAge.value)
+        .map((l) => [l.Géographie, l.Valeur]),
+    );
+    const valeurDe = (nom: string) => valeurs.get(nom);
+
+    const description = `${age}, ${sexe.toLowerCase()}, ${annee}`;
+
+    elmCarte.replaceChildren(
+      Plot.plot({
+        title: `Population par département en ${annee}`,
+        subtitle: `${sexe} · ${age}`,
+        caption: "Figure. Population des départements, données du recensement.",
+        ariaLabel: `Carte de la population par département : ${description}`,
+        ariaDescription:
+          "Chaque département est coloré selon sa population par classes. Plus la couleur est foncée, plus la population est élevée. Les valeurs exactes sont listées dans le tableau sous la carte.",
+        projection: {
+          type: "mercator",
+          domain: departements,
+        },
+        color: {
+          type: "quantile",
+          n: 8,
+          scheme: "Greens",
+          label: "Population en centaine de milliers",
+          legend: true,
+          transform: (d: number) => Math.round(d / 100000),
+        },
+        marks: [
+          Plot.geo(departements, {
+            fill: (d) => valeurDe(d.properties.nom),
+            stroke: "#999",
+            title: (d) => `${d.properties.nom} : ${valeurDe(d.properties.nom)}`,
+            tip: true,
+          }),
+        ],
+      }),
+    );
+
+    elmStatut.textContent = `Carte mise à jour : ${description}.`;
+
+    elmDonnees.replaceChildren(
+      ...departements.features.map((f) => {
+        const ligne = document.createElement("tr");
+        const nom = document.createElement("th");
+        nom.scope = "row";
+        nom.textContent = f.properties.nom;
+        const valeur = document.createElement("td");
+        valeur.textContent = String(valeurDe(f.properties.nom) ?? "Donnée indisponible");
+        ligne.append(nom, valeur);
+        return ligne;
+      }),
+    );
+  };
+
+  elmAnnee.addEventListener("change", () => {
+    majSexe();
+    majAge();
+    majCarte();
+  });
+  elmSexe.addEventListener("change", () => {
+    majAge();
+    majCarte();
+  });
+  elmAge.addEventListener("change", majCarte);
+
+  majSexe();
+  majAge();
+  majCarte();
+</script>

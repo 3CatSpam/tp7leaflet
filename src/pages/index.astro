@@ -5,17 +5,25 @@ import * as Plot from "@observablehq/plot";
 import penguins from "../assets/penguins.json";
 ---
 
-<Layout>
-  <h1 class="text-2xl">Test Astro et Plot (Observablehq)</h1>
-  <PlotFigure
-    options={{
-      marks: [
-        Plot.dot(penguins, {
-          x: "culmen_length_mm",
-          y: "culmen_depth_mm",
-          stroke: "species",
-        }),
-      ],
-    }}
-  />
+<Layout title="Test Astro et Plot (Observable Plot)">
+  <main class="p-4">
+    <h1 class="text-2xl">Test Astro et Plot (Observablehq)</h1>
+    <PlotFigure
+      options={{
+        title: "Longueur et profondeur du bec des manchots",
+        subtitle: "Espèces de manchots de l'archipel Palmer",
+        caption: "Figure 1. Nuage de points de la longueur et de la profondeur du bec, coloré par espèce.",
+        ariaLabel: "Nuage de points des mesures du bec des manchots, coloré par espèce",
+        ariaDescription:
+          "Chaque point représente un manchot. L'axe horizontal donne la longueur du bec en millimètres, l'axe vertical sa profondeur en millimètres.",
+        marks: [
+          Plot.dot(penguins, {
+            x: "culmen_length_mm",
+            y: "culmen_depth_mm",
+            stroke: "species",
+          }),
+        ],
+      }}
+    />
+  </main>
 </Layout>
